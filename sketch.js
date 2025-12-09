@@ -11,13 +11,15 @@ let hoop;
 function setup() {
   createCanvas(windowWidth, windowHeight);
   ball = new Ball(width / 2, 100, 15, 0.1);
-  hoop = new Hoop(width / 2, height - 100, 100, 20);
+  hoop = new Hoop(width / 2, height - 100, 100,radians(random(0,90)), 30);
 }
 
 function draw() {
   background(100);
   
   hoop.draw();
+  hoop.ellipseTouched();
+
   //Dessiner la forme de la classe Ball dans la canvas
   ellipse(ball.pos.x, ball.pos.y, ball.r * 2);
   //Dessiner la forme de la classe hoop dans la canvas
@@ -30,7 +32,7 @@ function draw() {
   ball.airDrag(0.001);
   ball.updatePosition();
 
-
+  hoop.remigration();
   
 }
 
