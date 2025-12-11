@@ -103,12 +103,17 @@ class Hoop {
     }
   }
   splatterSmallBalls() {
+    gm.updateScore(10);
+    gm.addStreak();
+    gm.resetPullsAndPush();
+    gm.rese
       for (let sb of this.smallBalls) {
         console.log("flee");
       let fleeForce = sb.flee(ball,10000).mult(1);
       sb.applyForce(fleeForce);
       }
-    setTimeout(() => {this.MoveHoop(random(100, width - 100), random(100, height - 100));}, 500);
+      
+    setTimeout(() => {this.MoveHoop(random(100, width - 100), random(100, height - 100));}, 300);
     
   } //TODO SmallBalls s'éparpillent 
 

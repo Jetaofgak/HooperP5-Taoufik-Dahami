@@ -13,8 +13,8 @@ class SmallBalls {
     this.maxSpeed = 7; // Speed de base
     this.maxForce = 1; // Force de base
 
-    this.maxSpeedDisp = 7;// Speed de dispertion
-    this.maxForceDisp =1;// Force de dispertion
+    this.maxSpeedDisp = 20;// Speed de dispertion
+    this.maxForceDisp =2;// Force de dispertion
 
     this.MaxSpeedReturnHome = 40; // Speed de retour au cerceau
     this.MaxForceReturnHome = 100; // Force de retour au cerceau

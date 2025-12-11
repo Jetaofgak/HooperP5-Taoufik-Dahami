@@ -3,11 +3,17 @@ class Ball {
     this.pos = createVector(x, y);
     this.r = r;
     this.gravity = gravity;
+    this.posOrg = createVector(x, y);
     this.speed = createVector(0, 0);
     this.acc = createVector(0, 0); // accumulator for forces
     this.mass = 1; // mass of the ball (can be adjusted)
     this.restitution = 0.6; // bounce factor when hitting the ground
     this._prevMousePressed = false; // suivi de l'état du clic pour impulsion unique
+    this.endStrekAfterXInputs=2; // Nombre d'inputs avant reset du streak
+    this.wallLeftTouched=false;
+    this.wallRightTouched=false;
+    this.ceilingTouched=false;
+    this.groundTouched=false;
     // (slowTime removed)
   }
   applyForce(force) {
@@ -22,7 +28,11 @@ class Ball {
   // slowTime removed
 
   // Applique une impulsion instantanée (change directement la vitesse)
-  applyExplosionImpulse(RatioExplosion) {
+  applyExplosionImpulse(RatioExplosion,oop) {
+    if(oop){
+      return;
+    }
+    gm.reducePush();
     let explosion = p5.Vector.sub(this.pos, createVector(mouseX, mouseY));
     let d = explosion.mag();
     // Treat RatioExplosion as a direct impulse magnitude (multiplier).
@@ -43,9 +53,12 @@ class Ball {
   }
 
 
-
   // Applique une impulsion instantanée vers le curseur
-  applyAttractionImpulse(RatioAttraction) {
+  applyAttractionImpulse(RatioAttraction,oop) {
+    if(oop){
+      return;
+    }
+    gm.reducePulls();
     let attraction = p5.Vector.sub(createVector(mouseX, mouseY), this.pos);
     let d = attraction.mag();
     // Treat RatioAttraction as direct impulse magnitude and apply falloff
@@ -62,6 +75,33 @@ class Ball {
     }
   }
 
+  flagWallSwitcher(side){
+    if(side==="left"){
+      this.wallLeftTouched=true;
+      this.wallRightTouched=false;
+      this.ceilingTouched=false;
+      this.groundTouched=false;
+    }
+    else if(side==="right"){
+      this.wallRightTouched=true;
+      this.wallLeftTouched=true;
+      this.ceilingTouched=false;
+      this.groundTouched=false;
+    }
+    else if(side==="ceiling"){
+      this.ceilingTouched=true;
+      this.wallLeftTouched=true;
+      this.wallRightTouched=false;
+      this.groundTouched=false;
+    }
+    else if(side==="ground"){
+      this.groundTouched=true;
+      this.wallLeftTouched=true;
+      this.wallRightTouched=false;
+      this.ceilingTouched=false;
+  
+    }
+  }
   updatePosition() {
     // Intégration basique (dt = 1)
     // acceleration = totalForce / mass
@@ -79,13 +119,32 @@ class Ball {
       this.speed.x *= -this.restitution;
       // petit amortissement vertical au contact
       this.speed.y *= 0.98;
+      
+      if(!this.wallLeftTouched)
+      {
+        this.flagWallSwitcher("left");
+        gm.updateScore(-1);
+      }
     }
+    else{
+      this.wallLeftTouched=false;
+    }
+
 
     // droite
     if (this.pos.x + this.r > width) {
       this.pos.x = width - this.r;
       this.speed.x *= -this.restitution;
       this.speed.y *= 0.98;
+      if(!this.wallRightTouched)
+      {
+        this.flagWallSwitcher("right");
+        gm.updateScore(-1);
+      }
+
+    }
+    else{
+      this.wallRightTouched=false;
     }
 
     // haut
@@ -93,11 +152,26 @@ class Ball {
       this.pos.y = this.r;
       this.speed.y *= -this.restitution;
       this.speed.x *= 0.98;
+      if(!this.ceilingTouched)
+      {
+        this.flagWallSwitcher("ceiling");
+        gm.updateScore(-1);
+      }
+
+    }
+    else{
+      this.ceilingTouched=false;
     }
 
     // ground collision handling (empêche la balle de s'enfoncer)
     let groundY = height; // utiliser la hauteur du canvas
     if (this.pos.y + this.r > groundY) {
+      if(!this.groundTouched)
+      {
+        this.flagWallSwitcher("ground");
+        gm.updateScore(-1);
+      }
+      
       // placer la balle sur le sol
       this.pos.y = groundY - this.r;
 
@@ -112,6 +186,9 @@ class Ball {
         // friction partielle au contact
         this.speed.x *= 0.98;
       }
+    }
+    else{
+      this.groundTouched=false;
     }
     
   }
@@ -135,12 +212,18 @@ class Ball {
     // Gérer une impulsion unique au moment du clic (si cette méthode est appelée chaque frame)
     let pressed = mouseIsPressed;
     if (pressed && !this._prevMousePressed) {
-      if (mouseButton === LEFT || keyIsDown(65)) {
-        this.applyExplosionImpulse(f);
-      } 
-      if (mouseButton === LEFT && keyIsDown(CONTROL)) {
-        this.applyAttractionImpulse(f);
+      this.endStrekAfterXInputs-=1;
+      if(this.endStrekAfterXInputs<=0){
+        gm.resetStreak();
+        this.endStrekAfterXInputs=2;
       }
+      if (mouseButton === LEFT && keyIsDown(SHIFT)) {
+        this.applyAttractionImpulse(f,gm.outOfPulls());
+      } 
+      else if (mouseButton === LEFT) {
+        this.applyExplosionImpulse(f,gm.outOfPush());
+      } 
+      
     }
     this._prevMousePressed = pressed;
   }

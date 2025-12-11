@@ -7,16 +7,18 @@
 
 let ball;
 let hoop;
-
+let gm;
+let executeEnd;
 function setup() {
   createCanvas(windowWidth, windowHeight);
   ball = new Ball(width / 2, 100, 15, 0.1);
   hoop = new Hoop(width / 2, height - 100, 100,radians(random(0,90)), 30);
+  gm = new GameManager(0,2,3);
 }
 
 function draw() {
   background(100);
-  
+  gm.displayScore();
   hoop.draw();
   hoop.ellipseTouched();
 
@@ -28,12 +30,19 @@ function draw() {
   fill(255, 0, 0);
 
   ball.applyGravity(0.1);
-  ball.mousePressed(25);
+  ball.mousePressed(35);
   ball.airDrag(0.001);
   ball.updatePosition();
 
   hoop.remigration();
-  
+
+  if (gm.outOfPulls() && gm.outOfPush()) {
+    executeEnd = setTimeout(() => {
+    gm.resetGame();}, 5000);
+  }
+  if (!gm.outOfPulls() || !gm.outOfPush()) {
+    clearTimeout(executeEnd);
+  }
 }
 
 
