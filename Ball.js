@@ -1,5 +1,5 @@
 class Ball {
-  constructor(x, y, r, gravity) {
+  constructor(x, y, r, gravity,s) {
     this.pos = createVector(x, y);
     this.r = r;
     this.gravity = gravity;
@@ -9,12 +9,25 @@ class Ball {
     this.mass = 1; // mass of the ball (can be adjusted)
     this.restitution = 0.6; // bounce factor when hitting the ground
     this._prevMousePressed = false; // suivi de l'état du clic pour impulsion unique
-    this.endStrekAfterXInputs=2; // Nombre d'inputs avant reset du streak
+    this.endStrekAfterXInputs=s; // Nombre d'inputs avant reset du streak
+    this.endStreakMaxInputs=s;
     this.wallLeftTouched=false;
     this.wallRightTouched=false;
     this.ceilingTouched=false;
     this.groundTouched=false;
-    // (slowTime removed)
+    this.dist = dist(mouseX, mouseY,this.pos.x, this.pos.y);
+    this.distMax = constrain(this.dist,0,500);
+    this.ligneLength = map(this.distMax,0,500,500,0);
+  }
+  updateLineParams() {
+    // Calculer la distance dynamique (doit être fait dans draw() ou updatePosition())
+    let currentDist = dist(mouseX, mouseY, this.pos.x, this.pos.y);
+    
+    // Contrainte pour définir la plage de l'effet (ex: max 500 pixels)
+    let distMax = constrain(currentDist, 0, 500); 
+    
+    // Mappage inversé : plus près (0) -> plus long (500), plus loin (500) -> plus court (0)
+    this.ligneLength = map(distMax, 0, 500, 500, 0); 
   }
   applyForce(force) {
     this.acc.add(force);
@@ -105,6 +118,7 @@ class Ball {
   updatePosition() {
     // Intégration basique (dt = 1)
     // acceleration = totalForce / mass
+    this.updateLineParams();
     let acceleration = p5.Vector.div(this.acc, this.mass);
     this.speed.add(acceleration);
     this.pos.add(this.speed);
@@ -190,7 +204,10 @@ class Ball {
     else{
       this.groundTouched=false;
     }
-    
+      textAlign(LEFT, BOTTOM);
+      let strek = this.endStrekAfterXInputs - 1;
+      text("Input left" + strek, 10, height - 10);
+      this.drawTraj();
   }
 //Appliquer la resistance de l'air quadratique (Genereer par Chatgpt)
   airDrag(k) {
@@ -215,8 +232,8 @@ class Ball {
       this.endStrekAfterXInputs-=1;
       if(this.endStrekAfterXInputs<=0){
         gm.resetStreak();
-        this.endStrekAfterXInputs=2;
       }
+      
       if (mouseButton === LEFT && keyIsDown(SHIFT)) {
         this.applyAttractionImpulse(f,gm.outOfPulls());
       } 
@@ -227,6 +244,41 @@ class Ball {
     }
     this._prevMousePressed = pressed;
   }
+
+  resetStreakInputs() {
+    this.endStrekAfterXInputs=this.endStreakMaxInputs;
+  }
   
+drawTraj() {
+    // La ligne n'est visible que si un clic est possible (endStrekAfterXInputs > 0)
+
+    
+    // Vecteur de la position de la balle vers la souris
+    let dirToMouse = p5.Vector.sub(createVector(mouseX, mouseY), this.pos);
+    
+    // La longueur de la ligne a déjà été calculée dans updateLineParams()
+    dirToMouse.setMag(this.ligneLength);
+    
+    // Couleur et style
+    strokeWeight(3);
+    
+    // Si l'utilisateur tient SHIFT (Attraction)
+    if (keyIsDown(SHIFT)) {
+      stroke(0, 0, 255, 150); // Bleu (Attraction)
+      // La ligne pointe vers le curseur (direction est dirToMouse)
+      line(this.pos.x, this.pos.y, this.pos.x + dirToMouse.x, this.pos.y + dirToMouse.y);
+    } 
+    // Sinon (Explosion par défaut)
+    else {
+      stroke(255, 0, 0, 150); // Rouge (Explosion)
+      // La ligne pointe à l'opposé du curseur (direction est -dirToMouse)
+      line(this.pos.x, this.pos.y, this.pos.x - dirToMouse.x, this.pos.y - dirToMouse.y);
+    }
+
+    // Afficher un petit point de mire à la fin de la ligne pour la cible
+    fill(255);
+    noStroke();
+    ellipse(mouseX, mouseY, 8, 8); 
+  }
 }
     

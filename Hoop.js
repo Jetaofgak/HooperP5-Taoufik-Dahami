@@ -106,6 +106,7 @@ class Hoop {
     gm.updateScore(10);
     gm.addStreak();
     gm.resetPullsAndPush();
+    ball.resetStreakInputs();
     gm.rese
       for (let sb of this.smallBalls) {
         console.log("flee");

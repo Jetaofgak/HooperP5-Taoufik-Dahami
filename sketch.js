@@ -11,7 +11,7 @@ let gm;
 let executeEnd;
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  ball = new Ball(width / 2, 100, 15, 0.1);
+  ball = new Ball(width / 2, 100, 15, 0.1,2);
   hoop = new Hoop(width / 2, height - 100, 100,radians(random(0,90)), 30);
   gm = new GameManager(0,2,3);
 }
@@ -43,6 +43,7 @@ function draw() {
   if (!gm.outOfPulls() || !gm.outOfPush()) {
     clearTimeout(executeEnd);
   }
+
 }
 
 
