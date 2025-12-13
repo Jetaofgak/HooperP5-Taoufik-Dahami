@@ -1,284 +1,334 @@
 class Ball {
-  constructor(x, y, r, gravity,s) {
-    this.pos = createVector(x, y);
-    this.r = r;
-    this.gravity = gravity;
-    this.posOrg = createVector(x, y);
-    this.speed = createVector(0, 0);
-    this.acc = createVector(0, 0); // accumulator for forces
-    this.mass = 1; // mass of the ball (can be adjusted)
-    this.restitution = 0.6; // bounce factor when hitting the ground
-    this._prevMousePressed = false; // suivi de l'état du clic pour impulsion unique
-    this.endStrekAfterXInputs=s; // Nombre d'inputs avant reset du streak
-    this.endStreakMaxInputs=s;
-    this.wallLeftTouched=false;
-    this.wallRightTouched=false;
-    this.ceilingTouched=false;
-    this.groundTouched=false;
-    this.dist = dist(mouseX, mouseY,this.pos.x, this.pos.y);
-    this.distMax = constrain(this.dist,0,500);
-    this.ligneLength = map(this.distMax,0,500,500,0);
-  }
-  updateLineParams() {
-    // Calculer la distance dynamique (doit être fait dans draw() ou updatePosition())
-    let currentDist = dist(mouseX, mouseY, this.pos.x, this.pos.y);
+    constructor(x, y, r, gravity, s) {
+        this.pos = createVector(x, y);
+        this.r = r;
+        this.gravity = gravity;
+        this.posOrg = createVector(x, y);
+        this.speed = createVector(0, 0);
+        this.acc = createVector(0, 0);
+        this.mass = 1;
+        this.restitution = 0.6;
+        this._prevMousePressed = false;
+        this.endStrekAfterXInputs = s;
+        this.endStreakMaxInputs = s;
+        this.wallLeftTouched = false;
+        this.wallRightTouched = false;
+        this.ceilingTouched = false;
+        this.groundTouched = false;
+        this.dist = dist(mouseX, mouseY, this.pos.x, this.pos.y);
+        this.distMax = constrain(this.dist, 0, 500);
+        this.ligneLength = map(this.distMax, 0, 500, 500, 0);
+        
+        // Paramètres pour evade/pursue/seek
+        this.maxSpeed = 15;  // Vitesse max pour les comportements steering
+        this.maxForce = 0.5; // Force max pour les comportements steering
+    }
+
+    // === NOUVELLES FONCTIONS STEERING ===
     
-    // Contrainte pour définir la plage de l'effet (ex: max 500 pixels)
-    let distMax = constrain(currentDist, 0, 500); 
-    
-    // Mappage inversé : plus près (0) -> plus long (500), plus loin (500) -> plus court (0)
-    this.ligneLength = map(distMax, 0, 500, 500, 0); 
-  }
-  applyForce(force) {
-    this.acc.add(force);
-  }
-
-  applyGravity(g) {
-    // Apply gravity as a force: F = m * g (downwards)
-    this.applyForce(createVector(0, this.mass * g));
-  }
-
-  // slowTime removed
-
-  // Applique une impulsion instantanée (change directement la vitesse)
-  applyExplosionImpulse(RatioExplosion,oop) {
-    if(oop){
-      return;
+    /**
+     * Seek: Se diriger vers une cible
+     * @param {p5.Vector} target - Position cible
+     * @param {boolean} arrival - Active le comportement d'arrivée (ralentir près de la cible)
+     * @returns {p5.Vector} Force de steering
+     */
+    seek(target, arrival = false) {
+        let force = p5.Vector.sub(target, this.pos);
+        let desiredSpeed = this.maxSpeed;
+        
+        if (arrival) {
+            let slowRadius = 100;
+            let distance = force.mag();
+            if (distance < slowRadius) {
+                desiredSpeed = map(distance, 0, slowRadius, 0, this.maxSpeed);
+            }
+        }
+        
+        force.setMag(desiredSpeed);
+        force.sub(this.speed);
+        force.limit(this.maxForce);
+        return force;
     }
-    gm.reducePush();
-    let explosion = p5.Vector.sub(this.pos, createVector(mouseX, mouseY));
-    let d = explosion.mag();
-    // Treat RatioExplosion as a direct impulse magnitude (multiplier).
-    // Apply a falloff with distance (1 at d=0 -> 0 at d=200)
-    let falloff = constrain(map(d, 0, 500, 1, 0), 0, 1);
-    let impulseMag = RatioExplosion * falloff;
-    // n'appliquer l'impulsion que si elle est non-nulle
-    if (impulseMag > 0) {
-      // annuler l'accumulateur de forces actuel avant d'appliquer l'impulsion
-      this.acc.set(0, 0);
-      // annuler la vitesse actuelle pour un effet plus net
-      this.speed.set(0, 0);
-      explosion.setMag(impulseMag);
-      // Δv = J / m  (J = impulse)
-      let deltaV = p5.Vector.div(explosion, this.mass);
-      this.speed.add(deltaV);
-    }
-  }
 
+    /**
+     * Pursue: Poursuivre un véhicule en prédisant sa position future
+     * @param {FearBall} vehicle - Le véhicule à poursuivre
+     * @returns {p5.Vector} Force de steering
+     */
+    pursue(vehicle) {
+        let target = vehicle.pos.copy();
+        let prediction = vehicle.vel.copy();
+        prediction.mult(10); // Prédiction 10 frames dans le futur
+        target.add(prediction);
+        
+        // Debug: afficher le point de prédiction (optionnel)
+        // fill(0, 255, 0);
+        // noStroke();
+        // circle(target.x, target.y, 16);
+        
+        return this.seek(target);
+    }
 
-  // Applique une impulsion instantanée vers le curseur
-  applyAttractionImpulse(RatioAttraction,oop) {
-    if(oop){
-      return;
+    /**
+     * Evade: Fuir un véhicule en prédisant sa position future
+     * @param {FearBall} vehicle - Le véhicule à éviter
+     * @returns {p5.Vector} Force de steering
+     */
+    evade(vehicle) {
+        let pursuit = this.pursue(vehicle);
+        pursuit.mult(-1); // Inverser la direction pour fuir
+        return pursuit;
     }
-    gm.reducePulls();
-    let attraction = p5.Vector.sub(createVector(mouseX, mouseY), this.pos);
-    let d = attraction.mag();
-    // Treat RatioAttraction as direct impulse magnitude and apply falloff
-    let falloff = constrain(map(d, 0, 500, 1, 0), 0, 1);
-    let impulseMag = RatioAttraction * falloff;
-    if (impulseMag > 0) {
-      // annuler l'accumulateur de forces avant l'impulsion
-      this.acc.set(0, 0);
-      // annuler la vitesse actuelle pour un effet plus net
-      this.speed.set(0, 0);
-      attraction.setMag(impulseMag);
-      let deltaV = p5.Vector.div(attraction, this.mass);
-      this.speed.add(deltaV);
-    }
-  }
 
-  flagWallSwitcher(side){
-    if(side==="left"){
-      this.wallLeftTouched=true;
-      this.wallRightTouched=false;
-      this.ceilingTouched=false;
-      this.groundTouched=false;
+    /**
+     * Vérifie si une FearBall est dans le rayon de peur et applique evade
+     * @param {Array<FearBall>} fearBalls - Tableau de toutes les FearBalls
+     */
+    checkAndEvadeFearBalls(fearBalls) {
+        for (let fearBall of fearBalls) {
+            let d = p5.Vector.dist(this.pos, fearBall.pos);
+            
+            // Si la balle entre dans le rayon de peur
+            if (d < fearBall.fearRadius) {
+                let evadeForce = this.evade(fearBall);
+                // Amplifier la force pour un évitement plus prononcé
+                evadeForce.mult(4);
+                this.applyForce(evadeForce);
+                
+                // Debug: visualiser le rayon de peur actif
+                if (fearBall.debug) {
+                    noFill();
+                    stroke(255, 0, 0);
+                    strokeWeight(2);
+                    circle(fearBall.pos.x, fearBall.pos.y, fearBall.fearRadius * 2);
+                }
+            }
+        }
     }
-    else if(side==="right"){
-      this.wallRightTouched=true;
-      this.wallLeftTouched=true;
-      this.ceilingTouched=false;
-      this.groundTouched=false;
-    }
-    else if(side==="ceiling"){
-      this.ceilingTouched=true;
-      this.wallLeftTouched=true;
-      this.wallRightTouched=false;
-      this.groundTouched=false;
-    }
-    else if(side==="ground"){
-      this.groundTouched=true;
-      this.wallLeftTouched=true;
-      this.wallRightTouched=false;
-      this.ceilingTouched=false;
-  
-    }
-  }
-  updatePosition() {
-    // Intégration basique (dt = 1)
-    // acceleration = totalForce / mass
-    this.updateLineParams();
-    let acceleration = p5.Vector.div(this.acc, this.mass);
-    this.speed.add(acceleration);
-    this.pos.add(this.speed);
 
-    // reset force accumulator for next frame
-    this.acc.set(0, 0);
+    // === FIN NOUVELLES FONCTIONS ===
 
-    // Collisions avec les 4 murs (gauche/droite/haut/bas)
-    // gauche
-    if (this.pos.x - this.r < 0) {
-      this.pos.x = this.r;
-      this.speed.x *= -this.restitution;
-      // petit amortissement vertical au contact
-      this.speed.y *= 0.98;
-      
-      if(!this.wallLeftTouched)
-      {
-        this.flagWallSwitcher("left");
-        gm.updateScore(-1);
+    updateLineParams() {
+        let currentDist = dist(mouseX, mouseY, this.pos.x, this.pos.y);
+        const maxEffectDistance = 500;
+        const maxLineLength = 500;
+        let distContrainte = constrain(currentDist, 0, maxEffectDistance);
+        
+        this.ligneLengthPush = map(distContrainte, 0, maxEffectDistance, maxLineLength, 0);
+        this.ligneLengthPull = map(distContrainte, 0, maxEffectDistance, 0, maxLineLength);
+    }
+
+    applyForce(force) {
+        this.acc.add(force);
+    }
+
+    applyGravity(g) {
+        this.applyForce(createVector(0, this.mass * g));
+    }
+
+    applyExplosionImpulse(RatioExplosion, oop) {
+        if (oop) {
+            return;
+        }
+        
+        gm.reducePush();
+        let explosion = p5.Vector.sub(this.pos, createVector(mouseX, mouseY));
+        let d = explosion.mag();
+        let falloff = constrain(map(d, 0, 500, 1, 0), 0, 1);
+        let impulseMag = RatioExplosion * falloff;
+        
+        if (impulseMag > 0) {
+            this.acc.set(0, 0);
+            this.speed.set(0, 0);
+            explosion.setMag(impulseMag);
+            let deltaV = p5.Vector.div(explosion, this.mass);
+            this.speed.add(deltaV);
+        }
+    }
+
+    applyAttractionImpulse(RatioAttraction, oop) {
+        if (oop) {
+            return;
+        }
+        
+        gm.reducePulls();
+        let attraction = p5.Vector.sub(createVector(mouseX, mouseY), this.pos);
+        let d = attraction.mag();
+        let falloff = constrain(map(d, 500, 0, 1, 0), 0, 1);
+        let impulseMag = RatioAttraction * falloff;
+        
+        if (impulseMag > 0) {
+            this.acc.set(0, 0);
+            this.speed.set(0, 0);
+            attraction.setMag(impulseMag);
+            let deltaV = p5.Vector.div(attraction, this.mass);
+            this.speed.add(deltaV);
+        }
+    }
+
+    flagWallSwitcher(side) {
+        if (side === "left") {
+            this.wallLeftTouched = true;
+            this.wallRightTouched = false;
+            this.ceilingTouched = false;
+            this.groundTouched = false;
+        } else if (side === "right") {
+            this.wallRightTouched = true;
+            this.wallLeftTouched = false;
+            this.ceilingTouched = false;
+            this.groundTouched = false;
+        } else if (side === "ceiling") {
+            this.ceilingTouched = true;
+            this.wallLeftTouched = false;
+            this.wallRightTouched = false;
+            this.groundTouched = false;
+        } else if (side === "ground") {
+            this.groundTouched = true;
+            this.wallLeftTouched = false;
+            this.wallRightTouched = false;
+            this.ceilingTouched = false;
+        }
+    }
+
+    updatePosition()
+     {
+        this.updateLineParams();
+        let acceleration = p5.Vector.div(this.acc, this.mass);
+        this.speed.add(acceleration);
+        this.pos.add(this.speed);
+        this.acc.set(0, 0);
+        
+        // Collisions avec les murs (reste identique)
+        if (this.pos.x - this.r < 0) {
+            this.pos.x = this.r;
+            this.speed.x *= -this.restitution;
+            this.speed.y *= 0.98;
+            if (!this.wallLeftTouched) {
+                this.flagWallSwitcher("left");
+                gm.updateScore(-1);
+            }
+        } else {
+            this.wallLeftTouched = false;
+        }
+        
+        if (this.pos.x + this.r > width) {
+            this.pos.x = width - this.r;
+            this.speed.x *= -this.restitution;
+            this.speed.y *= 0.98;
+            if (!this.wallRightTouched) {
+                this.flagWallSwitcher("right");
+                gm.updateScore(-1);
+            }
+        } else {
+            this.wallRightTouched = false;
+        }
+        
+        if (this.pos.y - this.r < 0) {
+            this.pos.y = this.r;
+            this.speed.y *= -this.restitution;
+            this.speed.x *= 0.98;
+            if (!this.ceilingTouched) {
+                this.flagWallSwitcher("ceiling");
+                gm.updateScore(-1);
+            }
+        } else {
+            this.ceilingTouched = false;
+        }
+        
+        let groundY = height;
+        if (this.pos.y + this.r > groundY) {
+            if (!this.groundTouched) {
+                this.flagWallSwitcher("ground");
+                gm.updateScore(-1);
+            }
+            
+            this.pos.y = groundY - this.r;
+            if (Math.abs(this.speed.y) < 0.5) {
+                this.speed.y = 0;
+                this.speed.x *= 0.98;
+            } else {
+                this.speed.y *= -this.restitution;
+                this.speed.x *= 0.98;
+            }
+        } else {
+            this.groundTouched = false;
+        }
+        
+        textAlign(LEFT, BOTTOM);
+        text("Input left: " + this.endStrekAfterXInputs, 10, height - 10);
+        this.drawTraj();
       }
-    }
-    else{
-      this.wallLeftTouched=false;
-    }
 
-
-    // droite
-    if (this.pos.x + this.r > width) {
-      this.pos.x = width - this.r;
-      this.speed.x *= -this.restitution;
-      this.speed.y *= 0.98;
-      if(!this.wallRightTouched)
-      {
-        this.flagWallSwitcher("right");
-        gm.updateScore(-1);
-      }
-
-    }
-    else{
-      this.wallRightTouched=false;
+    airDrag(k) {
+        let v = this.speed.copy();
+        let speed = v.mag();
+        if (speed === 0) return;
+        
+        let dragMag = k * speed * speed;
+        v.normalize();
+        v.mult(-dragMag);
+        this.applyForce(v);
     }
 
-    // haut
-    if (this.pos.y - this.r < 0) {
-      this.pos.y = this.r;
-      this.speed.y *= -this.restitution;
-      this.speed.x *= 0.98;
-      if(!this.ceilingTouched)
-      {
-        this.flagWallSwitcher("ceiling");
-        gm.updateScore(-1);
-      }
-
-    }
-    else{
-      this.ceilingTouched=false;
-    }
-
-    // ground collision handling (empêche la balle de s'enfoncer)
-    let groundY = height; // utiliser la hauteur du canvas
-    if (this.pos.y + this.r > groundY) {
-      if(!this.groundTouched)
-      {
-        this.flagWallSwitcher("ground");
-        gm.updateScore(-1);
-      }
-      
-      // placer la balle sur le sol
-      this.pos.y = groundY - this.r;
-
-      // si la vitesse verticale est faible, on immobilise la balle (seuil)
-      if (Math.abs(this.speed.y) < 0.5) {
-        this.speed.y = 0;
-        // appliquer un petit frottement horizontal au repos
-        this.speed.x *= 0.98;
-      } else {
-        // rebond simple
-        this.speed.y *= -this.restitution;
-        // friction partielle au contact
-        this.speed.x *= 0.98;
-      }
-    }
-    else{
-      this.groundTouched=false;
-    }
-      textAlign(LEFT, BOTTOM);
-      let strek = this.endStrekAfterXInputs - 1;
-      text("Input left" + strek, 10, height - 10);
-      this.drawTraj();
-  }
-//Appliquer la resistance de l'air quadratique (Genereer par Chatgpt)
-  airDrag(k) {
-    // Si aucune vitesse : aucun drag
-    let v = this.speed.copy();
-    let speed = v.mag();
-    if (speed === 0) return;
-
-    // Formule quadratique simplifiée:
-    // F_drag = -k * |v|^2 * (v / |v|) = -k * |v| * v
-    // on regroupe tous les coefficients physiques (0.5 * rho * Cd * A) dans k
-    let dragMag = k * speed * speed;
-    v.normalize();
-    v.mult(-dragMag);
-    this.applyForce(v);
-  }
-
-  mousePressed(f) {
-    // Gérer une impulsion unique au moment du clic (si cette méthode est appelée chaque frame)
-    let pressed = mouseIsPressed;
-    if (pressed && !this._prevMousePressed) {
-      this.endStrekAfterXInputs-=1;
-      if(this.endStrekAfterXInputs<=0){
-        gm.resetStreak();
-      }
-      
-      if (mouseButton === LEFT && keyIsDown(SHIFT)) {
-        this.applyAttractionImpulse(f,gm.outOfPulls());
-      } 
-      else if (mouseButton === LEFT) {
-        this.applyExplosionImpulse(f,gm.outOfPush());
-      } 
-      
-    }
-    this._prevMousePressed = pressed;
-  }
-
-  resetStreakInputs() {
-    this.endStrekAfterXInputs=this.endStreakMaxInputs;
-  }
-  
-drawTraj() {
-    // La ligne n'est visible que si un clic est possible (endStrekAfterXInputs > 0)
-
-    
-    // Vecteur de la position de la balle vers la souris
-    let dirToMouse = p5.Vector.sub(createVector(mouseX, mouseY), this.pos);
-    
-    // La longueur de la ligne a déjà été calculée dans updateLineParams()
-    dirToMouse.setMag(this.ligneLength);
-    
-    // Couleur et style
-    strokeWeight(3);
-    
-    // Si l'utilisateur tient SHIFT (Attraction)
-    if (keyIsDown(SHIFT)) {
-      stroke(0, 0, 255, 150); // Bleu (Attraction)
-      // La ligne pointe vers le curseur (direction est dirToMouse)
-      line(this.pos.x, this.pos.y, this.pos.x + dirToMouse.x, this.pos.y + dirToMouse.y);
-    } 
-    // Sinon (Explosion par défaut)
-    else {
-      stroke(255, 0, 0, 150); // Rouge (Explosion)
-      // La ligne pointe à l'opposé du curseur (direction est -dirToMouse)
-      line(this.pos.x, this.pos.y, this.pos.x - dirToMouse.x, this.pos.y - dirToMouse.y);
+    mousePressed(f) {
+        let pressed = mouseIsPressed;
+        if (pressed && !this._prevMousePressed) {
+            this.endStrekAfterXInputs -= 1;
+            if (this.endStrekAfterXInputs <= 0) {
+                this.endStrekAfterXInputs = 0;
+                gm.resetStreak();
+            }
+            
+            if (mouseButton === LEFT && keyIsDown(SHIFT)) {
+                this.applyAttractionImpulse(f, gm.outOfPulls());
+            } else if (mouseButton === LEFT) {
+                this.applyExplosionImpulse(f, gm.outOfPush());
+            }
+        }
+        this._prevMousePressed = pressed;
     }
 
-    // Afficher un petit point de mire à la fin de la ligne pour la cible
-    fill(255);
-    noStroke();
-    ellipse(mouseX, mouseY, 8, 8); 
-  }
+    resetStreakInputs() {
+        this.endStrekAfterXInputs = this.endStreakMaxInputs;
+    }
+
+    drawTraj() {
+
+        
+        let dirToMouse = p5.Vector.sub(createVector(mouseX, mouseY), this.pos);
+        let currentLineLength;
+        let endPointX;
+        let endPointY;
+        strokeWeight(3);
+        
+        if (keyIsDown(SHIFT)) {
+          if(gm.outOfPulls() == true)
+          {
+            console.log("Out of pulls: "+ gm.numberOfPulls)
+            noStroke();
+            return;
+          }
+            stroke(0, 0, 255, 150);
+            currentLineLength = this.ligneLengthPull;
+            dirToMouse.setMag(currentLineLength);
+            endPointX = this.pos.x + dirToMouse.x;
+            endPointY = this.pos.y + dirToMouse.y;
+        } else {
+            if(gm.outOfPush() == true)
+          {
+            noStroke();
+            return;
+          }
+            stroke(255, 0, 0, 150);
+            currentLineLength = this.ligneLengthPush;
+            dirToMouse.setMag(currentLineLength);
+            endPointX = this.pos.x - dirToMouse.x;
+            endPointY = this.pos.y - dirToMouse.y;
+        }
+        
+        line(this.pos.x, this.pos.y, endPointX, endPointY);
+        fill(255);
+        noStroke();
+        ellipse(mouseX, mouseY, 8, 8);
+    }
 }
-    
