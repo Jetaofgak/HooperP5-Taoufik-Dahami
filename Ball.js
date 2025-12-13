@@ -255,7 +255,7 @@ class Ball {
         }
         
         textAlign(LEFT, BOTTOM);
-        text("Input left: " + this.endStrekAfterXInputs, 10, height - 10);
+        text("Streak Input Left : " + this.endStrekAfterXInputs, 10, height - 10);
         this.drawTraj();
       }
 

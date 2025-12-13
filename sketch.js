@@ -15,12 +15,26 @@ let imgPushExpl;
 let imgForcePull;
 let imgForcePush;
 
+
+// Les sons
+let soundEffects = [];
+
+
 function preload() {
     // Le chargement des images reste dans preload car il doit être synchrone
     imgPullExpl = loadImage('images/Pull Explication.png'); 
     imgPushExpl = loadImage('images/Push Explication.png');
     imgForcePull = loadImage('images/Force Pull.png');
     imgForcePush = loadImage("images/Force Push.png");
+
+    soundEffects[0] = loadSound("sounds/DT_Ok.wav");
+    soundEffects[1] = loadSound("sounds/DT_Good.wav");
+    soundEffects[2] = loadSound("sounds/DT_Good.wav");
+    soundEffects[3] = loadSound("sounds/DT_Great.wav");
+    soundEffects[4] = loadSound("sounds/DT_Great.wav");
+    soundEffects[5] = loadSound("sounds/DT_Great.wav");
+    soundEffects[6] = loadSound("sounds/DT_Excellent.wav");
+    soundEffects[7] = loadSound("sounds/dry-bones-death.mp3");
 }
 
 function setup() {
@@ -131,10 +145,9 @@ function draw() {
             executeEnd = null;
         }
     }
-    function keyPressed() {
-    if (key === 'd') {
-        fearBall.debug = !fearBall.debug;
-    }
+    textAlign(CENTER, CENTER);
+    fill(0,0,255);
+    textSize(20);
+    text(gm.okState,width/2,height/2);
 }
 
-}
