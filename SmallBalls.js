@@ -2,44 +2,46 @@ class SmallBalls {
   constructor(x, y, r) {
     this.pos = createVector(x, y);
     this.r = r;
-    this.speed = createVector(0, 0);
-    this.home = createVector(0,0); // Position ou s'attache la small ball
-
-    // simple physics for the small ball itself (optional)
+    this.home = createVector(0, 0); // Position d'attache
+    
+    // Physique
     this.vel = createVector(0, 0);
     this.acc = createVector(0, 0);
     this.mass = 1;
-
-    this.maxSpeed = 7; // Speed de base
-    this.maxForce = 1; // Force de base
-
-    this.maxSpeedDisp = 20;// Speed de dispertion
-    this.maxForceDisp =2;// Force de dispertion
-
-    this.MaxSpeedReturnHome = 40; // Speed de retour au cerceau
-    this.MaxForceReturnHome = 100; // Force de retour au cerceau
-
-
-    this.rayonZoneDeFreinage = 100; // Zone de ralentissement pour le retour au cerceau
-
+    
+    // Paramètres de mouvement 
+    this.maxSpeed = 7;
+    this.maxForce = 1;
+    this.maxSpeedDispersion = 20;
+    this.maxForceDispersion = 2;
+    this.maxSpeedReturnHome = 40;
+    this.maxForceReturnHome = 100;
+    this.slowDownRadius = 100; // Zone de ralentissement pour le retour
+    
+    // Multiplicateur de fuite
+    this.fleeMultiplier = -10;
   }
 
+  // Définir la position "home" (Le point du Hooper appartenant a la SmallBall)
   appendHome(x, y) {
     this.home.set(x, y);
   }
+
+  // Appliquer une force (F = m * a)
   applyForce(f) {
-    // F = m * a -> a = F / m
     let a = p5.Vector.div(f, this.mass);
     this.acc.add(a);
   }
 
+  // Mise à jour de la physique
   update() {
     this.vel.add(this.acc);
-    //this.vel.limit(this.maxSpeed);
+    // Note: pas de limit ici pour permettre vitesse élevée lors du retour
     this.pos.add(this.vel);
     this.acc.set(0, 0);
   }
 
+  // Dessin de la SmallBall
   draw() {
     this.update();
     push();
@@ -49,61 +51,50 @@ class SmallBalls {
     pop();
   }
 
-
-returnHome() {
-    // Utiliser les propriétés du SmallBall
+  // Retour à la position "home" avec ralentissement (Arrival)
+  returnHome() {
     let target = this.home;
-    let desiredSpeedValue = this.MaxSpeedReturnHome;
+    let desiredSpeedValue = this.maxSpeedReturnHome;
     
-    // 1. Calculer le vecteur désiré (de la position actuelle à la cible)
+    // 1. Vecteur désiré (position actuelle → cible)
     let desiredVelocity = p5.Vector.sub(target, this.pos);
-    let distance = desiredVelocity.mag(); // Distance à la cible
-
-    // 2. Logique de ralentissement (Arrival)
-    // d = 0 est la distance minimale pour le map (arrêt complet)
-    if (distance < this.rayonZoneDeFreinage) {
-        // Map distance [0 à rayonZoneDeFreinage] vers vitesse [0 à maxSpeed]
-        desiredSpeedValue = map(
-            distance,
-            0, // Démarrage du map à distance 0
-            this.rayonZoneDeFreinage,
-            0, // Vitesse désirée = 0 à distance 0
-            this.MaxSpeedReturnHome // Vitesse désirée = maxSpeed au bord du rayon
-        );
+    let distance = desiredVelocity.mag();
+    
+    // 2. Ralentissement progressif dans la zone de freinage
+    if (distance < this.slowDownRadius) {
+      desiredSpeedValue = map(
+        distance,
+        0,
+        this.slowDownRadius,
+        0,
+        this.maxSpeedReturnHome
+      );
     }
     
     // 3. Définir la magnitude de la vitesse désirée
     desiredVelocity.setMag(desiredSpeedValue);
     
-    // 4. Calculer la force de steering (ESSENTIEL)
-    // Force = Vitesse désirée - Vitesse actuelle
+    // 4. Force de steering = vitesse désirée - vitesse actuelle
     let steeringForce = p5.Vector.sub(desiredVelocity, this.vel);
+    steeringForce.limit(this.maxForceReturnHome);
     
-    // Limiter la force
-    steeringForce.limit(this.MaxForceReturnHome);
-    
-    // 5. Retourner la force calculée
     return steeringForce;
-}
+  }
 
-  // comportement de seek.
-  seek(ball) {
-
-
-    let force = p5.Vector.sub(ball, this.pos);
+  // Comportement Seek (aller vers une cible)
+  seek(target) {
+    let force = p5.Vector.sub(target, this.pos);
     force.setMag(this.maxSpeed);
     force.sub(this.vel);
     force.limit(this.maxForce);
-    // on applique la force au véhicule
     return force;
-  
   }
 
-  // inverse de seek !
-  flee(target, distanceDeDetection = Infinity) {
-    return this.seek(target.pos,distanceDeDetection).mult(-10);
+  // Comportement Flee 
+  flee(target) {
+    // Seek vers la cible, puis inverser
+    let seekForce = this.seek(target.pos);
+    seekForce.mult(this.fleeMultiplier);
+    return seekForce;
   }
-
-
 }
- 

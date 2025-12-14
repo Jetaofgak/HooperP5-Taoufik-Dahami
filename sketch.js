@@ -1,5 +1,5 @@
 let ball;
-let fearBall= [] ;
+let fearBall = [];
 let hoop;
 let gm;
 let executeEnd;
@@ -9,176 +9,253 @@ let killBall;
 let repaireBall2;
 let killBall2;
 
-// Remplacer gameState et startGame par l'instance de la classe
-let menuManager; 
+// Menu
+let menuManager;
 let startButton;
 let startInfiniteButton;
 
-// Déclarer les variables d'images pour que preload puisse les utiliser
-let imgPullExpl; 
+// Images
+let imgPullExpl;
 let imgPushExpl;
 let imgForcePull;
 let imgForcePush;
 
-
-// Les sons
+// Sons
 let soundEffects = [];
 
-
 function preload() {
-    // Le chargement des images reste dans preload car il doit être synchrone
-    imgPullExpl = loadImage('images/Pull Explication.png'); 
-    imgPushExpl = loadImage('images/Push Explication.png');
-    imgForcePull = loadImage('images/Force Pull.png');
-    imgForcePush = loadImage("images/Force Push.png");
-
-    soundEffects[0] = loadSound("sounds/DT_Ok.wav");
-    soundEffects[1] = loadSound("sounds/DT_Good.wav");
-    soundEffects[2] = loadSound("sounds/DT_Good.wav");
-    soundEffects[3] = loadSound("sounds/DT_Great.wav");
-    soundEffects[4] = loadSound("sounds/DT_Great.wav");
-    soundEffects[5] = loadSound("sounds/DT_Great.wav");
-    soundEffects[6] = loadSound("sounds/DT_Excellent.wav");
-    soundEffects[7] = loadSound("sounds/dry-bones-death.mp3");
+  // Chargement des images
+  imgPullExpl = loadImage('images/Pull Explication.png');
+  imgPushExpl = loadImage('images/Push Explication.png');
+  imgForcePull = loadImage('images/Force Pull.png');
+  imgForcePush = loadImage("images/Force Push.png");
+  
+  // Chargement des sons
+  soundEffects[0] = loadSound("sounds/DT_Ok.wav");
+  soundEffects[1] = loadSound("sounds/DT_Good.wav");
+  soundEffects[2] = loadSound("sounds/DT_Good.wav");
+  soundEffects[3] = loadSound("sounds/DT_Great.wav");
+  soundEffects[4] = loadSound("sounds/DT_Great.wav");
+  soundEffects[5] = loadSound("sounds/DT_Great.wav");
+  soundEffects[6] = loadSound("sounds/DT_Excellent.wav");
+  soundEffects[7] = loadSound("sounds/dry-bones-death.mp3");
 }
 
 function setup() {
-    createCanvas(windowWidth, windowHeight);
-    window.imgPullExpl = imgPullExpl;
-    window.imgPushExpl = imgPushExpl;
-    window.imgForcePull = imgForcePull;
-    window.imgForcePush = imgForcePush;
-    
-    path = new Path();
-    repaireBall = new RepaireBall(path,5,8);
-    repaireBall.setCorner(0);
-    killBall = new KillBall(100,100, 30);
-    repaireBall2 = new RepaireBall(path,6,10,900,900);
-    repaireBall2.setCorner(2);
-    killBall2 = new KillBall(100,400,30);
-    m = path.radius;
-    path.addPoint(m, m);
-    path.addPoint(width - m, m);
-    path.addPoint(width - m, height - m);
-    path.addPoint(m, height - m);
-    // Initialisation des objets du jeu
-    ball = new Ball(width / 2, 100, 15, 0.1, 2);
-    fearBall.push(new FearBall(20, 20,70, 190));
-    hoop = new Hoop(width / 2, height - 100, 100, radians(random(0, 90)), 30);
-    
-    // Création du bouton
-    startButton = createButton('Démarrer le Jeu Normal !');
-    startButton.size(240, 50);
-    startButton.style('font-size', '20px');
-    startButton.hide(); 
-
-    startInfiniteButton = createButton('Démarrer le Jeu Infini!');
-    startInfiniteButton.size(240, 50);
-    startInfiniteButton.style('font-size', '20px');
-    startInfiniteButton.hide(); 
-    // Initialisation du gestionnaire de menu
-    menuManager = new GameMenu(startButton,startInfiniteButton);
-    
-    // Réinitialisation de la balle au démarrage via une fonction helper pour l'uniformité
-
+  createCanvas(windowWidth, windowHeight);
+  
+  // Rendre les images globales
+  window.imgPullExpl = imgPullExpl;
+  window.imgPushExpl = imgPushExpl;
+  window.imgForcePull = imgForcePull;
+  window.imgForcePush = imgForcePush;
+  
+  // Initialisation du path
+  initPath();
+  
+  // Initialisation des ennemis
+  initEnemies();
+  
+  // Initialisation des objets du jeu
+  initGameObjects();
+  
+  // Initialisation du menu
+  initMenu();
 }
 
-// Fonction utilitaire pour réinitialiser le jeu (appelée par setup et si besoin)
+//Le path est un rectangle autour de l'ecran
+function initPath() {
+  path = new Path();
+  const m = CONFIG.path.radius;
+  path.addPoint(m, m);
+  path.addPoint(width - m, m);
+  path.addPoint(width - m, height - m);
+  path.addPoint(m, height - m);
+}
 
+
+// Instanciation de deux KillBall
+function initEnemies() {
+  // RepaireBall 1 + KillBall 1
+  repaireBall = new RepaireBall(path, 5, 8);
+  repaireBall.setCorner(0);
+  killBall = new KillBall(100, 100, 30);
+  
+  // RepaireBall 2 + KillBall 2
+  repaireBall2 = new RepaireBall(path, 6, 10, 900, 900);
+  repaireBall2.setCorner(2);
+  killBall2 = new KillBall(100, 400, 30);
+}
+
+//Instantiation des balles, des fearball et du hoop
+function initGameObjects() {
+  ball = new Ball(
+    width / 2, 
+    CONFIG.ball.startY, 
+    CONFIG.ball.radius, 
+    CONFIG.physics.gravity, 
+    CONFIG.ball.maxInputStreak
+  );
+  
+  fearBall.push(new FearBall(
+    CONFIG.fearBall.startX, 
+    CONFIG.fearBall.startY, 
+    CONFIG.fearBall.radius, 
+    CONFIG.fearBall.fearRadius
+  ));
+  
+  hoop = new Hoop(
+    width / 2, 
+    height - CONFIG.hoop.margin, 
+    CONFIG.hoop.radius, 
+    radians(random(0, 90)), 
+    30
+  );
+}
+
+//Pour faire apparaitre le menu
+function initMenu() {
+  // Bouton du mode normal
+  startButton = createButton('Démarrer le Jeu Normal !');
+  startButton.size(240, 50);
+  startButton.style('font-size', '20px');
+  startButton.hide();
+  
+  // Bouton du mode Infini
+  startInfiniteButton = createButton('Démarrer le Jeu Infini!');
+  startInfiniteButton.size(240, 50);
+  startInfiniteButton.style('font-size', '20px');
+  startInfiniteButton.hide();
+  
+  menuManager = new GameMenu(startButton, startInfiniteButton);
+}
 
 function draw() {
-
-  //Verification des images
-    if (imgPushExpl == null) {
-        background(0);
-        textAlign(CENTER, CENTER);
-        fill(255);
-        textSize(24);
-        text("Chargement du jeu...", width / 2, height / 2);
-        console.log("Image non chargée, attente...");
-        return; // Stopper l'exécution jusqu'au chargement
-    }
-
-    // --- MACHINE À ÉTATS ---
-    // Maintenant on peut appeler menuManager en toute sécurité
-    menuManager.draw();
-    
-    if (menuManager.getGameState() === "MENU") {
-        return;
-    }
-    if (menuManager.getGameState() === "Infinite" && !gm)
-    {
-      console.log("Jeu infini")
-      gm = new GameManager(0, 3000, 3000);
-    }
-
-    if (menuManager.getGameState() === "Normal" && !gm)
-    {
-      console.log("Jeu normal")
-      gm = new GameManager(0,2,3);
-    }
-
-    background(20, 30, 50);
-    //PATHING
-    path.display();
-    repaireBall.update();
-    repaireBall.display();
-    repaireBall2.update();
-    repaireBall2.display();
-    killBall.seek(repaireBall.pos);
-    killBall.update();
-    killBall.display();
-    killBall2.seek(repaireBall2.pos);
-    killBall2.update();
-    killBall2.display();
-    // --- FIN MACHINE À ÉTATS ---
-
-    // Logique du jeu (seulement si gameState === "PLAYING")
-    
-    for (let fearBalls of fearBall) {
-        fearBalls.update();
-        fearBalls.draw();
-        fearBalls.wander();
-    }
-    ball.checkAndEvadeFearBalls(fearBall);
-    gm.displayScore();
-    hoop.draw();
-    hoop.ellipseTouched();
-    // Dessiner la fearBall
-    // Dessiner la balle 
-    
-    ellipse(ball.pos.x, ball.pos.y, ball.r * 2);
-    fill(255, 0, 0);
-
-    ball.applyGravity(0.1);
-    ball.mousePressed(35);
-    ball.airDrag(0.001);
-    ball.updatePosition();
-    ball.checkKillBallCollisions(killBall);
-    ball.checkKillBallCollisions(killBall2);
-
-
-
-    hoop.remigration();
-
-    // Logique de fin de jeu
-    if (gm.outOfPulls() && gm.outOfPush()) {
-        if (!executeEnd) {
-            executeEnd = setTimeout(() => {
-                // Réinitialiser l'état du jeu
-                gm = null;
-                menuManager.showMenu();      // Retourner au menu
-            }, 5000);
-        }
-    } else {
-        if (executeEnd) {
-            clearTimeout(executeEnd);
-            executeEnd = null;
-        }
-    }
+  // Vérification du chargement
+  if (!imgPushExpl) {
+    background(0);
     textAlign(CENTER, CENTER);
-    fill(0,0,255);
-    textSize(20);
-    text(gm.okState,width/2,height/2);
+    fill(255);
+    textSize(24);
+    text("Chargement du jeu...", width / 2, height / 2);
+    console.log("Image non chargée, attente...");
+    return;
+  }
+  
+  // Gestion du menu
+  menuManager.draw();
+  if (menuManager.getGameState() === "MENU") {
+    return;
+  }
+  
+  // Initialisation du GameManager selon le mode
+  initGameManager();
+  
+  // Fond
+  background(20, 30, 50);
+  
+  // Dessiner le path et les ennemis
+  drawPathAndEnemies();
+  
+  // Logique du jeu
+  updateGameLogic();
+  
+  // UI
+  drawUI();
+  
+  // Vérification fin de jeu
+  checkGameOver();
 }
 
+function initGameManager() {
+  if (menuManager.getGameState() === "Infinite" && !gm) {
+    console.log("Jeu infini");
+    gm = new GameManager(
+      0, 
+      CONFIG.gameManager.infinitePulls, 
+      CONFIG.gameManager.infinitePushes
+    );
+  }
+  
+  if (menuManager.getGameState() === "Normal" && !gm) {
+    console.log("Jeu normal");
+    gm = new GameManager(
+      0, 
+      CONFIG.gameManager.normalPulls, 
+      CONFIG.gameManager.normalPushes
+    );
+  }
+}
+
+function drawPathAndEnemies() {
+  path.display();
+  
+  // RepaireBall 1 + KillBall 1
+  repaireBall.update();
+  repaireBall.display();
+  killBall.seek(repaireBall.pos);
+  killBall.update();
+  killBall.display();
+  
+  // RepaireBall 2 + KillBall 2
+  repaireBall2.update();
+  repaireBall2.display();
+  killBall2.seek(repaireBall2.pos);
+  killBall2.update();
+  killBall2.display();
+}
+
+function updateGameLogic() {
+  // FearBall
+  for (let fearBalls of fearBall) {
+    fearBalls.update();
+    fearBalls.draw();
+    fearBalls.wander();
+  }
+  
+  // Ball physics
+  ball.checkAndEvadeFearBalls(fearBall);
+  ball.applyGravity(CONFIG.physics.gravity);
+  ball.mousePressed(CONFIG.physics.explosionForce);
+  ball.airDrag(CONFIG.physics.airDrag);
+  ball.updatePosition();
+  
+  // Collision avec KillBalls
+  ball.checkKillBallCollisions([killBall, killBall2]);
+  
+  // Hoop
+  hoop.draw();
+  hoop.ellipseTouched();
+  hoop.remigration();
+}
+
+function drawUI() {
+  // Score
+  gm.displayScore();
+  
+  // Ball
+  fill(255, 0, 0);
+  ellipse(ball.pos.x, ball.pos.y, ball.r * 2);
+  
+  // Message streak au centre
+  textAlign(CENTER, CENTER);
+  fill(0, 0, 255);
+  textSize(20);
+  text(gm.okState, width / 2, height / 2);
+}
+
+function checkGameOver() {
+  if (gm.outOfPulls() && gm.outOfPush()) {
+    if (!executeEnd) {
+      executeEnd = setTimeout(() => {
+        gm = null;
+        menuManager.showMenu();
+      }, CONFIG.gameManager.gameOverDelay);
+    }
+  } else {
+    if (executeEnd) {
+      clearTimeout(executeEnd);
+      executeEnd = null;
+    }
+  }
+}
