@@ -3,6 +3,11 @@ let fearBall= [] ;
 let hoop;
 let gm;
 let executeEnd;
+let path;
+let repaireBall;
+let killBall;
+let repaireBall2;
+let killBall2;
 
 // Remplacer gameState et startGame par l'instance de la classe
 let menuManager; 
@@ -44,7 +49,18 @@ function setup() {
     window.imgForcePull = imgForcePull;
     window.imgForcePush = imgForcePush;
     
-    
+    path = new Path();
+    repaireBall = new RepaireBall(path,5,8);
+    repaireBall.setCorner(0);
+    killBall = new KillBall(100,100, 30);
+    repaireBall2 = new RepaireBall(path,6,10,900,900);
+    repaireBall2.setCorner(2);
+    killBall2 = new KillBall(100,400,30);
+    m = path.radius;
+    path.addPoint(m, m);
+    path.addPoint(width - m, m);
+    path.addPoint(width - m, height - m);
+    path.addPoint(m, height - m);
     // Initialisation des objets du jeu
     ball = new Ball(width / 2, 100, 15, 0.1, 2);
     fearBall.push(new FearBall(20, 20,70, 190));
@@ -101,8 +117,20 @@ function draw() {
       console.log("Jeu normal")
       gm = new GameManager(0,2,3);
     }
-    // --- Logique du jeu ---
+
     background(20, 30, 50);
+    //PATHING
+    path.display();
+    repaireBall.update();
+    repaireBall.display();
+    repaireBall2.update();
+    repaireBall2.display();
+    killBall.seek(repaireBall.pos);
+    killBall.update();
+    killBall.display();
+    killBall2.seek(repaireBall2.pos);
+    killBall2.update();
+    killBall2.display();
     // --- FIN MACHINE À ÉTATS ---
 
     // Logique du jeu (seulement si gameState === "PLAYING")
@@ -126,6 +154,9 @@ function draw() {
     ball.mousePressed(35);
     ball.airDrag(0.001);
     ball.updatePosition();
+    ball.checkKillBallCollisions(killBall);
+    ball.checkKillBallCollisions(killBall2);
+
 
 
     hoop.remigration();

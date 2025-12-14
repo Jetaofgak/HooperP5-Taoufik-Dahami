@@ -192,6 +192,7 @@ class Ball {
 
     updatePosition()
      {
+        
         this.updateLineParams();
         let acceleration = p5.Vector.div(this.acc, this.mass);
         this.speed.add(acceleration);
@@ -330,5 +331,28 @@ class Ball {
         fill(255);
         noStroke();
         ellipse(mouseX, mouseY, 8, 8);
+    }
+    isCollidingWithKillBall(killBall) {
+    const d = p5.Vector.dist(this.pos, killBall.pos); // distance entre 2 vecteurs [web:34]
+    return d <= (this.r + killBall.r);
+    }
+    checkKillBallCollisions(killBalls) {
+      
+        const d = p5.Vector.dist(this.pos, killBalls.pos);
+        if (d <= this.r + killBalls.r) {
+        this.onHitKillBall(killBalls);
+        return;
+        }
+        
+    }
+
+    // Fonction appelée quand collision (vide pour l’instant)
+    onHitKillBall(killBall) {
+    // Optionnel: empêcher plusieurs triggers la même frame
+    if (this._reloading) return;
+    this._reloading = true;
+
+    // Recharge la page (équivalent F5)
+    window.location.reload(); // [web:112]
     }
 }
