@@ -1,9 +1,9 @@
-# Le HOOPER 🏀
+# Le HOOPER 
 
 ## Description
 **Le HOOPER** est un jeu d'adresse développé en p5.js où vous devez guider une balle vers des anneaux (hoops) en utilisant des forces de push et pull, tout en évitant des obstacles mobiles.
 
-## 🎮 Contrôles
+##  Contrôles
 
 ### Système d'impulsions
 - **PUSH** : `Clic gauche`
@@ -16,7 +16,7 @@
   - Plus le curseur est **éloigné** de la balle, plus l'attraction est forte (effet élastique)
   - Consomme 1 Pull
 
-## 🧠 Steering Behaviors Implémentés
+##  Steering Behaviors Implémentés
 
 ### 1. **Evade** (Fuite)
 - **FearBall** (grosse balle rouge) : Patrouille aléatoirement sur l'écran
@@ -43,7 +43,7 @@
 - La **FearBall** utilise un comportement de wander pour se déplacer aléatoirement
 - Il y a un cercle de prédiction devant la balle qui change de direction progressivement
 
-## 🎯 Objectif et Scoring
+##  Objectif et Scoring
 
 ### Gagner des points
 - Toucher un **Hoop** (anneau) = **+10 points × Streak**
@@ -59,7 +59,7 @@
 -  Sons différents selon le niveau de streak : "Ok" → "Good" x 2 → "Great!" x 3 → "Excellent!!!" → "Holy!!"
 -  Les sons sont tirer du jeu " Mario et Luigi : Dream Team "
 
-## 🎲 Modes de Jeu
+##  Modes de Jeu
 
 ### Mode Normal
 - **2 Pulls** disponibles
@@ -69,11 +69,9 @@
 ### Mode Infini
 - **3000 Pulls** disponibles
 - **3000 Pushes** disponibles
-- Pour pratiquer sans limite
+- Pour se familiariser avec les touches et la physique du jeu.
 
-## 🏗️ Architecture Technique
-
-### Fichiers principaux
+## Fichiers principaux
 - `CONFIG.js` : Configuration centralisée (constantes physiques, paramètres de jeu)
 - `Ball.js` : Balle principale du joueur (physique + steering behaviors)
 - `KillBall.js` : Ennemis qui suivent les RepaireBalls dans le chemin autour de l'ecran.
@@ -86,6 +84,6 @@
 - `GameMenu.js` : Menu principal et instructions
 - `sketch.js` : Boucle principale du jeu
 
-## 🚀 Comment y jouer
+##  Comment y jouer
 
 https://jetaofgak.github.io/HooperP5-Taoufik-Dahami/
